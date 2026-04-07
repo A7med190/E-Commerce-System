@@ -1,0 +1,9 @@
+@echo off
+echo === E-Commerce System ===
+cd /d D:\Projects\1.E-Commerce System\ecommerce_backend
+echo Installing dependencies...
+python -m pip install -r requirements.txt -q
+echo Running migrations...
+python manage.py migrate
+echo Starting server...
+python manage.py runserver 8000
