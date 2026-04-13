@@ -40,8 +40,10 @@ class RegisterSerializer(serializers.ModelSerializer):
             password=validated_data['password'],
             first_name=validated_data.get('first_name', ''),
             last_name=validated_data.get('last_name', ''),
-            phone=validated_data.get('phone', ''),
         )
+        if validated_data.get('phone'):
+            user.phone = validated_data['phone']
+            user.save()
         return user
 
 

@@ -4,36 +4,42 @@ from core.models import BaseModel
 
 
 class Category(BaseModel):
-    name = models.CharField(max_length=200)
-    slug = models.SlugField(max_length=250, unique=True)
+    name = models.CharField(max_length=200, db_index=True)
+    slug = models.SlugField(max_length=250, unique=True, db_index=True)
     description = models.TextField(blank=True)
     parent = models.ForeignKey('self', on_delete=models.CASCADE, null=True, blank=True, related_name='children')
     image = models.ImageField(upload_to='categories/', blank=True, null=True)
-    is_active = models.BooleanField(default=True)
+    is_active = models.BooleanField(default=True, db_index=True)
 
     class Meta:
         verbose_name_plural = 'Categories'
         ordering = ['name']
+        indexes = [
+            models.Index(fields=['name', 'is_active']),
+        ]
 
     def __str__(self):
         return self.name
 
 
 class Product(BaseModel):
-    name = models.CharField(max_length=300)
-    slug = models.SlugField(max_length=350, unique=True)
+    name = models.CharField(max_length=300, db_index=True)
+    slug = models.SlugField(max_length=350, unique=True, db_index=True)
     description = models.TextField()
-    base_price = models.DecimalField(max_digits=10, decimal_places=2, validators=[MinValueValidator(0)])
-    sku = models.CharField(max_length=100, unique=True)
+    base_price = models.DecimalField(max_digits=10, decimal_places=2, validators=[MinValueValidator(0)], db_index=True)
+    sku = models.CharField(max_length=100, unique=True, db_index=True)
     category = models.ForeignKey(Category, on_delete=models.SET_NULL, null=True, related_name='products')
-    is_active = models.BooleanField(default=True)
-    is_featured = models.BooleanField(default=False)
+    is_active = models.BooleanField(default=True, db_index=True)
+    is_featured = models.BooleanField(default=False, db_index=True)
 
     class Meta:
         ordering = ['-created_at']
         indexes = [
             models.Index(fields=['slug']),
             models.Index(fields=['category', 'is_active']),
+            models.Index(fields=['is_active', 'is_featured', '-created_at']),
+            models.Index(fields=['base_price']),
+            models.Index(fields=['name', 'is_active']),
         ]
 
     def __str__(self):
@@ -55,10 +61,13 @@ class ProductImage(BaseModel):
     product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name='images')
     image = models.ImageField(upload_to='products/')
     is_primary = models.BooleanField(default=False)
-    display_order = models.PositiveIntegerField(default=0)
+    display_order = models.PositiveIntegerField(default=0, db_index=True)
 
     class Meta:
         ordering = ['display_order', '-is_primary']
+        indexes = [
+            models.Index(fields=['product', 'display_order']),
+        ]
 
     def __str__(self):
         return f'Image for {self.product.name}'
@@ -74,13 +83,16 @@ class CustomizationOption(BaseModel):
         ('color', 'Color Picker'),
         ('file', 'File Upload'),
     )
-    name = models.CharField(max_length=200)
+    name = models.CharField(max_length=200, db_index=True)
     option_type = models.CharField(max_length=10, choices=OPTION_TYPES)
     is_required = models.BooleanField(default=False)
-    display_order = models.PositiveIntegerField(default=0)
+    display_order = models.PositiveIntegerField(default=0, db_index=True)
 
     class Meta:
         ordering = ['display_order']
+        indexes = [
+            models.Index(fields=['name', 'option_type']),
+        ]
 
     def __str__(self):
         return self.name
@@ -95,11 +107,14 @@ class CustomizationValue(BaseModel):
     value = models.CharField(max_length=200)
     price_modifier = models.DecimalField(max_digits=10, decimal_places=2, default=0, validators=[MinValueValidator(0)])
     modifier_type = models.CharField(max_length=10, choices=MODIFIER_TYPES, default='fixed')
-    is_default = models.BooleanField(default=False)
-    display_order = models.PositiveIntegerField(default=0)
+    is_default = models.BooleanField(default=False, db_index=True)
+    display_order = models.PositiveIntegerField(default=0, db_index=True)
 
     class Meta:
         ordering = ['display_order']
+        indexes = [
+            models.Index(fields=['option', 'is_default']),
+        ]
 
     def __str__(self):
         return f'{self.option.name}: {self.value}'
@@ -115,6 +130,9 @@ class ProductCustomization(BaseModel):
     class Meta:
         unique_together = ('product', 'option')
         ordering = ['option__display_order']
+        indexes = [
+            models.Index(fields=['product', 'option']),
+        ]
 
     def __str__(self):
         return f'{self.product.name} - {self.option.name}'
@@ -128,11 +146,14 @@ class ProductCustomization(BaseModel):
 
 class Inventory(BaseModel):
     product = models.OneToOneField(Product, on_delete=models.CASCADE, related_name='inventory')
-    stock_quantity = models.PositiveIntegerField(default=0)
+    stock_quantity = models.PositiveIntegerField(default=0, db_index=True)
     low_stock_threshold = models.PositiveIntegerField(default=10)
 
     class Meta:
         ordering = ['product__name']
+        indexes = [
+            models.Index(fields=['stock_quantity', 'low_stock_threshold']),
+        ]
 
     def __str__(self):
         return f'{self.product.name} - Stock: {self.stock_quantity}'

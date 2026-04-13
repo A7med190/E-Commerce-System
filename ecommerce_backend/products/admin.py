@@ -49,5 +49,5 @@ class CustomizationOptionAdmin(admin.ModelAdmin):
 @admin.register(Inventory)
 class InventoryAdmin(admin.ModelAdmin):
     list_display = ['product', 'stock_quantity', 'low_stock_threshold', 'is_in_stock', 'is_low_stock']
-    list_filter = ['is_in_stock', 'is_low_stock']
+    list_filter = []
     search_fields = ['product__name']

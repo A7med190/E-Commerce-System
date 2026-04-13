@@ -2,7 +2,6 @@ from django.contrib import admin
 from products.models import Product
 
 
-@admin.register(Product)
 class ProductSearchAdmin(admin.ModelAdmin):
     list_display = ['name', 'slug', 'base_price', 'is_active', 'is_featured', 'created_at']
     list_filter = ['is_active', 'is_featured', 'category']

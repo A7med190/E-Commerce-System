@@ -8,6 +8,9 @@ class Cart(BaseModel):
 
     class Meta:
         ordering = ['-updated_at']
+        indexes = [
+            models.Index(fields=['user', '-updated_at']),
+        ]
 
     def __str__(self):
         return f'Cart for {self.user.email}'
@@ -26,13 +29,17 @@ class Cart(BaseModel):
 
 class CartItem(BaseModel):
     cart = models.ForeignKey(Cart, on_delete=models.CASCADE, related_name='items')
-    product = models.ForeignKey('products.Product', on_delete=models.CASCADE)
+    product = models.ForeignKey('products.Product', on_delete=models.CASCADE, db_index=True)
     quantity = models.PositiveIntegerField(validators=[MinValueValidator(1)], default=1)
     customizations = models.JSONField(default=list, help_text='List of {option_id, value_id(s), text_value}')
     price_at_add = models.DecimalField(max_digits=10, decimal_places=2)
 
     class Meta:
         ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['cart', '-created_at']),
+            models.Index(fields=['cart', 'product']),
+        ]
 
     def __str__(self):
         return f'{self.product.name} x {self.quantity}'

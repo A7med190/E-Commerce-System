@@ -9,7 +9,9 @@ from .models import Payment
 from .serializers import PaymentSerializer, PaymentIntentSerializer
 from orders.models import Order, OrderStatusHistory
 
-stripe.api_key = settings.STRIPE_SECRET_KEY
+
+def get_stripe_api_key():
+    return getattr(settings, 'STRIPE_SECRET_KEY', '')
 
 
 class CreatePaymentIntentView(APIView):
@@ -20,6 +22,9 @@ class CreatePaymentIntentView(APIView):
         serializer.is_valid(raise_exception=True)
         order = serializer.validated_data['order_id']
         try:
+            stripe.api_key = get_stripe_api_key()
+            if not stripe.api_key:
+                return Response({'error': 'Stripe not configured'}, status=status.HTTP_400_BAD_REQUEST)
             intent = stripe.PaymentIntent.create(
                 amount=int(order.total * 100),
                 currency='usd',
@@ -42,6 +47,7 @@ class StripeWebhookView(APIView):
     authentication_classes = []
 
     def post(self, request):
+        stripe.api_key = get_stripe_api_key()
         payload = request.body
         sig_header = request.META.get('HTTP_STRIPE_SIGNATURE', '')
         try:

@@ -30,7 +30,11 @@ class WishlistItemViewSet(viewsets.ModelViewSet):
             from rest_framework.exceptions import ValidationError
             raise ValidationError({'product_id': 'This field is required.'})
         wishlist, _ = Wishlist.objects.get_or_create(user=request.user)
-        product = Product.objects.get(id=product_id)
+        try:
+            product = Product.objects.get(id=product_id)
+        except Product.DoesNotExist:
+            from rest_framework.exceptions import NotFound
+            raise NotFound('Product not found')
         item, created = WishlistItem.objects.get_or_create(wishlist=wishlist, product=product)
         if created:
             serializer = self.get_serializer(item)

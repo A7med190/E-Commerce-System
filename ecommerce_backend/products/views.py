@@ -3,6 +3,7 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.filters import SearchFilter, OrderingFilter
+from decimal import Decimal
 from .models import Category, Product, ProductImage, CustomizationOption, CustomizationValue, ProductCustomization, Inventory
 from .serializers import (
     CategorySerializer, ProductListSerializer, ProductDetailSerializer,
@@ -51,9 +52,9 @@ class ProductViewSet(viewsets.ModelViewSet):
         min_price = self.request.query_params.get('min_price', None)
         max_price = self.request.query_params.get('max_price', None)
         if min_price:
-            qs = qs.filter(base_price__gte=min_price)
+            qs = qs.filter(base_price__gte=Decimal(min_price))
         if max_price:
-            qs = qs.filter(base_price__lte=max_price)
+            qs = qs.filter(base_price__lte=Decimal(max_price))
         return qs
 
     def get_serializer_class(self):
@@ -78,9 +79,12 @@ class ProductViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=['get'])
     def related(self, request, slug=None):
         product = self.get_object()
-        related = Product.objects.filter(
-            category=product.category, is_active=True
-        ).exclude(id=product.id)[:8]
+        if product.category:
+            related = Product.objects.filter(
+                category=product.category, is_active=True
+            ).exclude(id=product.id)[:8]
+        else:
+            related = Product.objects.none()
         serializer = ProductListSerializer(related, many=True)
         return Response(serializer.data)
 
@@ -93,9 +97,16 @@ class ProductCustomizationManageView(generics.ListCreateAPIView):
         product_id = self.kwargs.get('product_id')
         return ProductCustomization.objects.filter(product_id=product_id).select_related('option').prefetch_related('option__values')
 
-    def perform_create(self, serializer):
+    def get_object(self):
         product_id = self.kwargs.get('product_id')
-        product = Product.objects.get(id=product_id)
+        try:
+            return Product.objects.get(id=product_id)
+        except Product.DoesNotExist:
+            from rest_framework.exceptions import NotFound
+            raise NotFound('Product not found')
+
+    def perform_create(self, serializer):
+        product = self.get_object()
         serializer.save(product=product)
 
 
