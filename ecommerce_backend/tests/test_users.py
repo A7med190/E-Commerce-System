@@ -17,7 +17,6 @@ def api_client():
 def user(db):
     return User.objects.create_user(
         email='testuser@example.com',
-        username='testuser',
         password='testpass123'
     )
 
@@ -34,9 +33,8 @@ class TestUserRegistration:
         url = reverse('register')
         data = {
             'email': 'newuser@example.com',
-            'username': 'newuser',
             'password': 'testpass123',
-            'password2': 'testpass123'
+            'password_confirm': 'testpass123'
         }
         response = api_client.post(url, data, format='json')
         assert response.status_code in [status.HTTP_201_CREATED, status.HTTP_200_OK]

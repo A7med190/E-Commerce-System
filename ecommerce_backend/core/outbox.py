@@ -1,40 +1,13 @@
-import uuid
-import json
 import logging
-import hashlib
-import threading
 from datetime import timedelta
-from typing import Optional, Dict, Any, Callable
-from django.db import models
-from django.utils import timezone
+from typing import Dict, Any, Callable
 from django.conf import settings
-from django.core.cache import cache
+from django.db import models
+from django.db.models import Q, F
+from django.utils import timezone
+from core.models import OutboxMessage
 
 logger = logging.getLogger(__name__)
-
-
-class OutboxMessage(models.Model):
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    created_at = models.DateTimeField(auto_now_add=True)
-    event_type = models.CharField(max_length=100)
-    payload = models.JSONField()
-    processed = models.BooleanField(default=False)
-    processed_at = models.DateTimeField(null=True, blank=True)
-    retry_count = models.IntegerField(default=0)
-    max_retries = models.IntegerField(default=3)
-    error_message = models.TextField(blank=True)
-    lock = models.TextField(null=True, blank=True)
-    lock_timeout = models.DateTimeField(null=True, blank=True)
-
-    class Meta:
-        ordering = ['created_at']
-        indexes = [
-            models.Index(fields=['processed', 'created_at']),
-            models.Index(fields=['event_type']),
-        ]
-
-    def __str__(self):
-        return f"{self.event_type} - {self.id}"
 
 
 class OutboxService:
@@ -58,8 +31,8 @@ class OutboxService:
     def process_pending(self, batch_size: int = 100):
         now = timezone.now()
         messages = OutboxMessage.objects.filter(
-            models.Q(processed=False),
-            models.Q(retry_count__lt=models.F('max_retries')),
+            Q(processed=False),
+            Q(retry_count__lt=F('max_retries')),
         ).exclude(
             lock__isnull=False,
             lock_timeout__gt=now,

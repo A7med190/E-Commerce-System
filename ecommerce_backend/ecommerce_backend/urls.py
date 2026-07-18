@@ -1,4 +1,4 @@
-from django.urls import path, include
+from django.urls import path, include, re_path
 from django.conf import settings
 from django.conf.urls.static import static
 from rest_framework.routers import DefaultRouter
@@ -14,6 +14,7 @@ from wishlist.views import WishlistView, WishlistItemViewSet
 from search.views import SearchView, RecommendationsView
 from core.health import health_check_registry, HealthCheckSerializer
 from django.http import JsonResponse
+from ecommerce_backend.spa import spa_index, spa_asset
 
 router = DefaultRouter()
 router.register(r'categories', CategoryViewSet, basename='category')
@@ -50,6 +51,7 @@ urlpatterns = [
     path('api/users/me/addresses/<uuid:pk>/', AddressViewSet.as_view({'get': 'retrieve', 'put': 'update', 'patch': 'partial_update', 'delete': 'destroy'}), name='address-detail'),
 
     path('api/cart/', CartView.as_view(), name='cart'),
+    path('api/cart/clear/', CartView.as_view(), name='cart-clear'),
 
     path('api/payments/create-intent/', CreatePaymentIntentView.as_view(), name='create-payment-intent'),
     path('api/payments/webhook/', StripeWebhookView.as_view(), name='stripe-webhook'),
@@ -67,6 +69,9 @@ urlpatterns = [
     path('sse/', include('core.sse_urls')),
 
     path('api/', include(router.urls)),
+
+    path('assets/<path:path>', spa_asset, name='spa-asset'),
+    re_path(r'^(?!api/|assets/|static/|media/|docs/|schema/|redoc/|health/|ws/|sse/|__debug__/).*$', spa_index, name='spa-index'),
 ]
 
 if settings.DEBUG:

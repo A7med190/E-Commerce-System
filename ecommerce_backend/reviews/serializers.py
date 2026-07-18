@@ -1,5 +1,6 @@
 from rest_framework import serializers
 from .models import Review, ReviewImage
+from products.models import Product
 
 
 class ReviewImageSerializer(serializers.ModelSerializer):
@@ -20,18 +21,25 @@ class ReviewSerializer(serializers.ModelSerializer):
 
 class ReviewCreateSerializer(serializers.ModelSerializer):
     images = serializers.ListField(child=serializers.ImageField(), required=False, write_only=True)
+    product = serializers.PrimaryKeyRelatedField(
+        queryset=Product.objects.all(), required=False
+    )
 
     class Meta:
         model = Review
         fields = ['product', 'rating', 'comment', 'images']
 
-    def validate_product(self, value):
+    def validate(self, attrs):
         user = self.context['request'].user
-        if Review.objects.filter(user=user, product=value).exists():
-            raise serializers.ValidationError('You have already reviewed this product.')
-        has_purchased = user.orders.filter(status__in=['delivered', 'shipped'], items__product=value).exists()
+        product = attrs.get('product') or self.context.get('product')
+        if not product:
+            raise serializers.ValidationError({'product': 'Product is required.'})
+        attrs['product'] = product
+        if Review.objects.filter(user=user, product=product).exists():
+            raise serializers.ValidationError({'product': 'You have already reviewed this product.'})
+        has_purchased = user.orders.filter(status__in=['delivered', 'shipped'], items__product=product).exists()
         self._has_purchased = has_purchased
-        return value
+        return attrs
 
     def create(self, validated_data):
         images = validated_data.pop('images', [])

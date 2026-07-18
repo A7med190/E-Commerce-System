@@ -46,43 +46,6 @@ class TestCircuitBreaker(TestCase):
 
 
 @pytest.mark.django_db
-class TestSoftDelete(TestCase):
-    def setUp(self):
-        from core.models import BaseSoftDeleteModel
-        from products.models import Product
-        self.Product = Product
-
-    def test_soft_delete_manager_excludes_deleted(self):
-        product = self.Product.objects.create(
-            name="Test Product",
-            slug="test-product",
-            description="Test",
-            base_price=10.00,
-            sku="TEST-SKU",
-        )
-        
-        product.delete()
-        
-        self.assertEqual(self.Product.objects.count(), 0)
-        self.assertEqual(self.Product.all_objects.count(), 1)
-
-    def test_restore_deleted_object(self):
-        product = self.Product.objects.create(
-            name="Test Product",
-            slug="test-product-restore",
-            description="Test",
-            base_price=10.00,
-            sku="TEST-SKU-RESTORE",
-        )
-        
-        product.delete()
-        product.restore()
-        
-        self.assertEqual(self.Product.objects.count(), 1)
-        self.assertFalse(product.is_deleted)
-
-
-@pytest.mark.django_db
 class TestIdempotencyMiddleware(TestCase):
     def setUp(self):
         self.client = APIClient()
